@@ -1,0 +1,37 @@
+version: '3.9'
+services:
+  db:
+    image: postgres:13.0-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - .dbenv
+    ports:
+      - "5432:5432"
+
+  python:
+    build:
+      context: .
+      dockerfile: docker/python/Dockerfile
+    environment:
+      - DJANGO_SETTINGS_MODULE=core.settings
+      - PYTHONUNBUFFERED=1
+    env_file:
+      - .env.dev
+    ports:
+      - 8000:8000
+    command: gunicorn -w 4 core.wsgi -b 0.0.0.0:8000
+    depends_on:
+      db:
+          condition: service_started
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+    ports:
+      - 80:80
+    depends_on:
+      - python
+
+volumes:
+  postgres_data:
